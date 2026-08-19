@@ -44,3 +44,41 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
+// ==========================================================================
+// Web Push — アプリを閉じていても届くバックグラウンド通知
+// ==========================================================================
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+
+  const title = data.title || "メッセージノート";
+  const options = {
+    body: data.body || "あなたを想っています",
+    icon: "./icons/icon-192.png",
+    badge: "./icons/icon-192.png",
+    tag: data.room ? `message-note-${data.room}` : "message-note",
+    renotify: true,
+    data: { url: data.url || "./" },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "./";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((allClients) => {
+      const existing = allClients.find((c) => "focus" in c);
+      if (existing) return existing.focus();
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});
